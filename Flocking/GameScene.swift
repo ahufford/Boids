@@ -34,55 +34,21 @@ class GameScene: SKScene {
     override func didMove(to view: SKView) {
         screenBounds = view.bounds
         touchPos = nil
-
-        var b = Boid(imageNamed: "boid")
-        b.position = view.center
-        b.size = CGSize(width: 20, height: 20)
-        b.velocity = CGPoint(x: 0, y: -40)
-        boids.append(b)
-        addChild(b)
-
-        b = Boid(imageNamed: "boid")
-        b.position = view.center + CGPoint(x: 0, y: 50)
-        b.size = CGSize(width: 20, height: 20)
-        b.velocity = CGPoint(x: -40, y: 0)
-        boids.append(b)
-        addChild(b)
-
-
     }
     
-    var x = 1
     func touchDown(atPoint pos : CGPoint) {
         let b = Boid(imageNamed: "boid")
         b.position = pos
         b.size = CGSize(width: 20, height: 20)
-        //b.velocity = CGPoint(x: CGFloat.random(in: -400...400), y: CGFloat.random(in: -400...400))
-        if x%2 == 0 {
-            b.velocity = CGPoint(x: 0, y: -40)
-        } else {
-            b.velocity = CGPoint(x: -40, y: 00)
-        }
-        //let x = Int.random(in: 1...4)
-//        if x == 1{
-//            b.velocity = CGPoint(x: 20, y: 0)
-//        } else if x == 2{
-//            b.velocity = CGPoint(x: -20, y: 0)
-//        }else if x == 3{
-//            b.velocity = CGPoint(x: 0, y: 20)
-//        }else{
-//            b.velocity = CGPoint(x: 0, y: -20)
-//        }
-        x+=1
+        b.velocity = CGPoint(x: CGFloat.random(in: CGFloat(maxVelocity * -1)...CGFloat(maxVelocity)), y: CGFloat.random(in: CGFloat(maxVelocity * -1)...CGFloat(maxVelocity)))
         boids.append(b)
         addChild(b)
+
         touchPos = pos
-        touchSprite(point: pos, color: .orange)
 
     }
     
     func touchMoved(toPoint pos : CGPoint) {
-        touchSprite(point: pos, color: .orange)
         touchPos = pos
 
     }
@@ -92,7 +58,7 @@ class GameScene: SKScene {
 
     }
 
-    func touchSprite(point: CGPoint, color: UIColor) {
+    func squareSprite(point: CGPoint, color: UIColor) {
         let centerSprite = SKSpriteNode(color: color, size: CGSize(width: 4, height: 4))
         centerSprite.position = point
 
@@ -139,10 +105,10 @@ class GameScene: SKScene {
         }
 
         if showCommands {
-            touchSprite(point: sprite.alignmentCommand ?? CGPoint.zero, color: .red)
-            touchSprite(point: sprite.cohesionCommand ?? CGPoint.zero, color: .green)
-            touchSprite(point: sprite.seperationCommand ?? CGPoint.zero, color: .blue)
-            touchSprite(point: totalCommand, color: .white)
+            squareSprite(point: sprite.alignmentCommand ?? CGPoint.zero, color: .red)
+            squareSprite(point: sprite.cohesionCommand ?? CGPoint.zero, color: .green)
+            squareSprite(point: sprite.seperationCommand ?? CGPoint.zero, color: .blue)
+            squareSprite(point: totalCommand, color: .white)
         }
 
 
