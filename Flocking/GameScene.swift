@@ -18,11 +18,13 @@ class GameScene: SKScene {
     // There are 3 functions that are called in update function at the end of the file
     // that can be commented to change the functionality
     let showCommands = false
-    let repulseFactor: CGFloat = 3.0
-    let maxVelocity = 100.0 // pixel per second??
+    let maxVelocity = 250.0 // pixel per second??
     let maxTurn = CGFloat.pi / 4 // rads per second
-    let sightRange: CGFloat = 100.0
-    let alignmentFactor: CGFloat = 15
+    var sightRange: CGFloat = 40.0
+
+    var alignmentFactor: CGFloat = 20.0
+    var repulseFactor: CGFloat = 5.0
+
 /********************************************************/
 
     var boids: [Boid] = []
@@ -34,6 +36,9 @@ class GameScene: SKScene {
     override func didMove(to view: SKView) {
         screenBounds = view.bounds
         touchPos = nil
+        for _ in 1...50 {
+            touchDown(atPoint: view.center)
+        }
     }
     
     func touchDown(atPoint pos : CGPoint) {
@@ -234,6 +239,16 @@ class GameScene: SKScene {
             }
         }
         return localBoids
+    }
+
+    func changeSightRange(value: Float) {
+        sightRange = CGFloat(value)
+    }
+    func changeAlignmentFactor(value: Float) {
+        alignmentFactor = CGFloat(value)
+    }
+    func changeRepulseFactor(value: Float) {
+        repulseFactor = CGFloat(value)
     }
 
     override func update(_ currentTime: TimeInterval) {
