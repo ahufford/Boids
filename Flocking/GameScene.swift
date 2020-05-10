@@ -15,6 +15,8 @@ class GameScene: SKScene {
     //      dont find boids behind your in some range
     //      add sliders
 /********************************************************/
+    // There are 3 functions that are called in update function at the end of the file
+    // that can be commented to change the functionality
     let showCommands = false
     let repulseFactor: CGFloat = 3.0
     let maxVelocity = 100.0 // pixel per second??
@@ -278,6 +280,7 @@ class GameScene: SKScene {
         //print("\(dt*1000) ms from last update")
 
         for b in boids {
+            // Comment these 3 to add or remove behaviors
             seperation(sprite: b)
             alignment(sprite: b)
             cohesion(sprite: b)
