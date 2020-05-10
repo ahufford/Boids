@@ -10,26 +10,57 @@ import SpriteKit
 import GameplayKit
 
 class GameScene: SKScene {
-    
-    var boids: [Boid] = []
 
+    //TODO: Wrap Detection around screen
+    //      dont find boids behind your in some range
+    //      add sliders
+/********************************************************/
+    let showCommands = false
+    let repulseFactor: CGFloat = 3.0
+    let maxVelocity = 100.0 // pixel per second??
+    let maxTurn = CGFloat.pi / 4 // rads per second
+    let sightRange: CGFloat = 100.0
+    let alignmentFactor: CGFloat = 15
+/********************************************************/
+
+    var boids: [Boid] = []
     var lastUpdateTime: TimeInterval = 0
     var dt: TimeInterval = 0
-
-    let moveSpeed = 250.0
-
+    var touchPos: CGPoint?
     var screenBounds: CGRect = CGRect.zero
 
     override func didMove(to view: SKView) {
         screenBounds = view.bounds
+        touchPos = nil
+
+        var b = Boid(imageNamed: "boid")
+        b.position = view.center
+        b.size = CGSize(width: 20, height: 20)
+        b.velocity = CGPoint(x: 0, y: -40)
+        boids.append(b)
+        addChild(b)
+
+        b = Boid(imageNamed: "boid")
+        b.position = view.center + CGPoint(x: 0, y: 50)
+        b.size = CGSize(width: 20, height: 20)
+        b.velocity = CGPoint(x: -40, y: 0)
+        boids.append(b)
+        addChild(b)
+
+
     }
     
     var x = 1
     func touchDown(atPoint pos : CGPoint) {
         let b = Boid(imageNamed: "boid")
         b.position = pos
-        b.size = CGSize(width: 40, height: 40)
-        b.velocity = CGPoint(x: CGFloat.random(in: -400...400), y: CGFloat.random(in: -400...400))
+        b.size = CGSize(width: 20, height: 20)
+        //b.velocity = CGPoint(x: CGFloat.random(in: -400...400), y: CGFloat.random(in: -400...400))
+        if x%2 == 0 {
+            b.velocity = CGPoint(x: 0, y: -40)
+        } else {
+            b.velocity = CGPoint(x: -40, y: 00)
+        }
         //let x = Int.random(in: 1...4)
 //        if x == 1{
 //            b.velocity = CGPoint(x: 20, y: 0)
@@ -40,17 +71,34 @@ class GameScene: SKScene {
 //        }else{
 //            b.velocity = CGPoint(x: 0, y: -20)
 //        }
-        x += 1
+        x+=1
         boids.append(b)
         addChild(b)
+        touchPos = pos
+        touchSprite(point: pos, color: .orange)
+
     }
     
     func touchMoved(toPoint pos : CGPoint) {
+        touchSprite(point: pos, color: .orange)
+        touchPos = pos
 
     }
     
     func touchUp(atPoint pos : CGPoint) {
+        touchPos = nil
 
+    }
+
+    func touchSprite(point: CGPoint, color: UIColor) {
+        let centerSprite = SKSpriteNode(color: color, size: CGSize(width: 4, height: 4))
+        centerSprite.position = point
+
+        let wait = SKAction.wait(forDuration: 0.1)
+        let remove = SKAction.removeFromParent()
+        let seq = SKAction.sequence([wait, remove])
+        centerSprite.run(seq)
+        addChild(centerSprite)
     }
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -75,11 +123,49 @@ class GameScene: SKScene {
     let extraAngle = CGFloat(Float.pi / 6)
 
     func moveSprite(sprite: Boid) {
+        let angle = atan2(sprite.velocity.y, sprite.velocity.x)
+
+        var totalCommand = sprite.position
+        if sprite.cohesionCommand != nil {
+            totalCommand += sprite.cohesionCommand! - sprite.position
+        }
+        if sprite.seperationCommand != nil {
+            totalCommand += sprite.seperationCommand! - sprite.position
+        }
+        if sprite.alignmentCommand != nil {
+            totalCommand += sprite.alignmentCommand! - sprite.position
+        }
+
+        if showCommands {
+            touchSprite(point: sprite.alignmentCommand ?? CGPoint.zero, color: .red)
+            touchSprite(point: sprite.cohesionCommand ?? CGPoint.zero, color: .green)
+            touchSprite(point: sprite.seperationCommand ?? CGPoint.zero, color: .blue)
+            touchSprite(point: totalCommand, color: .white)
+        }
+
+
+        if totalCommand != sprite.position {
+            let commandedAngle = sprite.position.angleToPoint(pointOnCircle: totalCommand)
+            var angleError = commandedAngle - angle
+            if angleError > CGFloat.pi {
+                angleError -= (2 * CGFloat.pi)
+            }
+            var newAngle = angle
+            if angleError > 0 {
+                newAngle = angle + (maxTurn * CGFloat(dt))
+            } else {
+                newAngle = angle - (maxTurn * CGFloat(dt))
+            }
+            sprite.velocity.x = cos(newAngle) * CGFloat(maxVelocity)
+            sprite.velocity.y = sin(newAngle) * CGFloat(maxVelocity)
+
+        }
+
         let ammountToMove = CGPoint(x: sprite.velocity.x * CGFloat(dt), y: sprite.velocity.y * CGFloat(dt))
         sprite.position = CGPoint(x: sprite.position.x + ammountToMove.x,
                                   y: sprite.position.y + ammountToMove.y)
-        let angle = atan2(sprite.velocity.y, sprite.velocity.x)
         sprite.zRotation = angle + extraAngle
+        checkBounds(sprite: sprite)
 
     }
 
@@ -95,7 +181,93 @@ class GameScene: SKScene {
             sprite.position.y = screenBounds.minY
         }
     }
-    
+
+    func seperation(sprite: Boid) {
+        let localBoids = getLocalBoids(sprite: sprite)
+        let count = localBoids.count
+        if count != 0 {
+
+            var runPoint: CGPoint = sprite.position
+            for b in localBoids {
+                // This is the distance of X and Y
+                var distance = sprite.position - b.position
+                distance *= pow(1 - (distance.length() / sightRange), 2) * repulseFactor
+                runPoint += distance
+
+            }
+            sprite.seperationCommand = runPoint
+        } else {
+            sprite.seperationCommand = nil
+        }
+    }
+
+    func alignment(sprite: Boid) {
+        let localBoids = getLocalBoids(sprite: sprite)
+        let count = localBoids.count
+        if count != 0 {
+            var totalVelocity = CGPoint.zero
+            for b in localBoids {
+                totalVelocity += b.velocity
+            }
+            var averageAngle = atan2(totalVelocity.y, totalVelocity.x)
+            if averageAngle < 0 {
+                averageAngle += CGFloat.pi * 2
+            }
+
+            let spriteAngle = sprite.position.angleToPoint(pointOnCircle: sprite.position + sprite.velocity)
+            let angDiff = averageAngle - spriteAngle
+            // This is a need for left turn
+            var vectorAngle: CGFloat = 0.0
+            if angDiff > 0 {
+                vectorAngle = spriteAngle + (CGFloat.pi / 2)
+            } else {
+                vectorAngle = spriteAngle - (CGFloat.pi / 2)
+            }
+            if vectorAngle > 2 * CGFloat.pi {
+                vectorAngle -= 2 * CGFloat.pi
+            }
+            if vectorAngle < 0 {
+                vectorAngle += 2 * CGFloat.pi
+            }
+            let alignment = (CGPoint(angle: vectorAngle) * alignmentFactor + sprite.position)
+
+            sprite.alignmentCommand = alignment
+
+        } else {
+            sprite.alignmentCommand = nil
+        }
+    }
+
+    func cohesion(sprite: Boid) {
+        let localBoids = getLocalBoids(sprite: sprite)
+        let count = localBoids.count
+        if count != 0 {
+            var centerPoint: CGPoint = CGPoint.zero
+            for b in localBoids {
+                centerPoint = b.position + centerPoint
+            }
+            centerPoint.x = centerPoint.x / CGFloat(count)
+            centerPoint.y = centerPoint.y / CGFloat(count)
+
+            sprite.cohesionCommand = centerPoint
+        } else {
+            sprite.cohesionCommand = nil
+        }
+
+    }
+
+
+    func getLocalBoids(sprite: Boid) -> [Boid] {
+        var localBoids: [Boid] = []
+        for b in boids {
+            let distance = sprite.position.distanceToPoint(otherPoint: b.position)
+            if distance < sightRange && distance != 0 {
+                localBoids.append(b)
+            }
+        }
+        return localBoids
+    }
+
     override func update(_ currentTime: TimeInterval) {
         if lastUpdateTime > 0 {
             dt = currentTime - lastUpdateTime
@@ -103,132 +275,18 @@ class GameScene: SKScene {
             dt = 0
         }
         lastUpdateTime = currentTime
-        print("\(dt*1000) ms from last update")
+        //print("\(dt*1000) ms from last update")
 
         for b in boids {
+            seperation(sprite: b)
+            alignment(sprite: b)
+            cohesion(sprite: b)
+
             moveSprite(sprite: b)
 
-            checkBounds(sprite: b)
         }
 
     }
 }
 
 
-// Taken from ACBRadialMenuView Project
-// BSD 3-Clause License
-// Copyright (c) 2017, akhilcb (https://github.com/akhilcb)
-extension CGPoint {
-
-    static func pointOnCircle(center: CGPoint, radius: CGFloat, angle: CGFloat) -> CGPoint {
-        let x = center.x + radius * cos(angle)
-        let y = center.y + radius * sin(angle)
-
-        return CGPoint(x: x, y: y)
-    }
-
-    static func angleBetweenThreePoints(center: CGPoint, firstPoint: CGPoint, secondPoint: CGPoint) -> CGFloat {
-        let firstAngle = atan2(firstPoint.y - center.y, firstPoint.x - center.x)
-        let secondAnlge = atan2(secondPoint.y - center.y, secondPoint.x - center.x)
-        var angleDiff = firstAngle - secondAnlge
-
-        if angleDiff < 0 {
-            angleDiff *= -1
-        }
-
-        return angleDiff
-    }
-
-    func angleBetweenPoints(firstPoint: CGPoint, secondPoint: CGPoint) -> CGFloat {
-        return CGPoint.angleBetweenThreePoints(center: self, firstPoint: firstPoint, secondPoint: secondPoint)
-    }
-
-    func angleToPoint(pointOnCircle: CGPoint) -> CGFloat {
-
-        let originX = pointOnCircle.x - self.x
-        let originY = pointOnCircle.y - self.y
-        var radians = atan2(originY, originX)
-
-        while radians < 0 {
-            radians += CGFloat(2 * Double.pi)
-        }
-
-        return radians
-    }
-
-    static func pointOnCircleAtArcDistance(center: CGPoint,
-                                           point: CGPoint,
-                                           radius: CGFloat,
-                                           arcDistance: CGFloat,
-                                           clockwise: Bool) -> CGPoint {
-
-        var angle = center.angleToPoint(pointOnCircle: point);
-
-        if clockwise {
-            angle = angle + (arcDistance / radius)
-        } else {
-            angle = angle - (arcDistance / radius)
-        }
-
-        return self.pointOnCircle(center: center, radius: radius, angle: angle)
-
-    }
-
-    func distanceToPoint(otherPoint: CGPoint) -> CGFloat {
-        return sqrt(pow((otherPoint.x - x), 2) + pow((otherPoint.y - y), 2))
-    }
-
-    static func CGPointRound(_ point: CGPoint) -> CGPoint {
-        return CGPoint(x: CoreGraphics.round(point.x), y: CoreGraphics.round(point.y))
-    }
-
-    static func intersectingPointsOfCircles(firstCenter: CGPoint, secondCenter: CGPoint, firstRadius: CGFloat, secondRadius: CGFloat ) -> (firstPoint: CGPoint?, secondPoint: CGPoint?) {
-
-        let distance = firstCenter.distanceToPoint(otherPoint: secondCenter)
-        let m = firstRadius + secondRadius
-        var n = firstRadius - secondRadius
-
-        if n < 0 {
-            n = n * -1
-        }
-
-        //no intersection
-        if distance > m {
-            return (firstPoint: nil, secondPoint: nil)
-        }
-
-        //circle is inside other circle
-        if distance < n {
-            return (firstPoint: nil, secondPoint: nil)
-        }
-
-        //same circle
-        if distance == 0 && firstRadius == secondRadius {
-            return (firstPoint: nil, secondPoint: nil)
-        }
-
-        let a = ((firstRadius * firstRadius) - (secondRadius * secondRadius) + (distance * distance)) / (2 * distance)
-        let h = sqrt(firstRadius * firstRadius - a * a)
-
-        var p = CGPoint.zero
-        p.x = firstCenter.x + (a / distance) * (secondCenter.x - firstCenter.x)
-        p.y = firstCenter.y + (a / distance) * (secondCenter.y - firstCenter.y)
-
-        //only one point intersecting
-        if distance == firstRadius + secondRadius {
-            return (firstPoint: p, secondPoint: nil)
-        }
-
-        var p1 = CGPoint.zero
-        var p2 = CGPoint.zero
-
-        p1.x = p.x + (h / distance) * (secondCenter.y - firstCenter.y)
-        p1.y = p.y - (h / distance) * (secondCenter.x - firstCenter.x)
-
-        p2.x = p.x - (h / distance) * (secondCenter.y - firstCenter.y)
-        p2.y = p.y + (h / distance) * (secondCenter.x - firstCenter.x)
-
-        //return both points
-        return (firstPoint: p1, secondPoint: p2)
-    }
-}

@@ -14,6 +14,7 @@
 		705222772466070500E50DD8 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 705222762466070500E50DD8 /* Assets.xcassets */; };
 		7052227A2466070500E50DD8 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 705222782466070500E50DD8 /* LaunchScreen.storyboard */; };
 		70522282246612F300E50DD8 /* Boid.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70522281246612F300E50DD8 /* Boid.swift */; };
+		705222842467340600E50DD8 /* CGExtentions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 705222832467340600E50DD8 /* CGExtentions.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -26,6 +27,7 @@
 		705222792466070500E50DD8 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		7052227B2466070500E50DD8 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		70522281246612F300E50DD8 /* Boid.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Boid.swift; sourceTree = "<group>"; };
+		705222832467340600E50DD8 /* CGExtentions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CGExtentions.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -60,6 +62,7 @@
 			children = (
 				705222692466070400E50DD8 /* AppDelegate.swift */,
 				7052226F2466070400E50DD8 /* GameScene.swift */,
+				705222832467340600E50DD8 /* CGExtentions.swift */,
 				70522281246612F300E50DD8 /* Boid.swift */,
 				705222712466070400E50DD8 /* GameViewController.swift */,
 				705222732466070400E50DD8 /* Main.storyboard */,
@@ -141,6 +144,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				705222842467340600E50DD8 /* CGExtentions.swift in Sources */,
 				705222702466070400E50DD8 /* GameScene.swift in Sources */,
 				705222722466070400E50DD8 /* GameViewController.swift in Sources */,
 				7052226A2466070400E50DD8 /* AppDelegate.swift in Sources */,
