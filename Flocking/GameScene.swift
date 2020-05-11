@@ -17,13 +17,13 @@ class GameScene: SKScene {
 /********************************************************/
     // There are 3 functions that are called in update function at the end of the file
     // that can be commented to change the functionality
-    let showCommands = false
-    let maxVelocity = 250.0 // pixel per second??
-    let maxTurn = CGFloat.pi / 4 // rads per second
+    var showCommands = false
+    var maxVelocity:CGFloat = 200.0 // pixel per second??
+    var maxTurn = CGFloat.pi / 2 // rads per second
     var sightRange: CGFloat = 40.0
 
     var alignmentFactor: CGFloat = 20.0
-    var repulseFactor: CGFloat = 5.0
+    var repulseFactor: CGFloat = 3.0
 
 /********************************************************/
 
@@ -39,6 +39,13 @@ class GameScene: SKScene {
         for _ in 1...50 {
             touchDown(atPoint: view.center)
         }
+    }
+    func destroyNodes() {
+        removeAllChildren()
+        boids.removeAll()
+    }
+    func debugSwitch(value: Bool) {
+        showCommands = value
     }
     
     func touchDown(atPoint pos : CGPoint) {
@@ -67,7 +74,7 @@ class GameScene: SKScene {
         let centerSprite = SKSpriteNode(color: color, size: CGSize(width: 4, height: 4))
         centerSprite.position = point
 
-        let wait = SKAction.wait(forDuration: 0.1)
+        let wait = SKAction.wait(forDuration: 0.05)
         let remove = SKAction.removeFromParent()
         let seq = SKAction.sequence([wait, remove])
         centerSprite.run(seq)
@@ -156,6 +163,10 @@ class GameScene: SKScene {
     }
 
     func seperation(sprite: Boid) {
+        if repulseFactor == 0.0 {
+            sprite.seperationCommand = nil
+            return
+        }
         let localBoids = getLocalBoids(sprite: sprite)
         let count = localBoids.count
         if count != 0 {
@@ -175,9 +186,15 @@ class GameScene: SKScene {
     }
 
     func alignment(sprite: Boid) {
+        let turnBuffer: CGFloat = 0.1
+        if alignmentFactor == 0.0 {
+            sprite.alignmentCommand = nil
+            return
+        }
         let localBoids = getLocalBoids(sprite: sprite)
         let count = localBoids.count
         if count != 0 {
+            /*
             var totalVelocity = CGPoint.zero
             for b in localBoids {
                 totalVelocity += b.velocity
@@ -186,9 +203,20 @@ class GameScene: SKScene {
             if averageAngle < 0 {
                 averageAngle += CGFloat.pi * 2
             }
+             */
+            var averageAngle: CGFloat = 0.0
+            for b in localBoids {
+                averageAngle += b.zRotation
+            }
+            averageAngle = averageAngle / CGFloat(localBoids.count)
 
-            let spriteAngle = sprite.position.angleToPoint(pointOnCircle: sprite.position + sprite.velocity)
+            let spriteAngle = sprite.zRotation
             let angDiff = averageAngle - spriteAngle
+            if angDiff < turnBuffer && angDiff > turnBuffer * -1 {
+                sprite.alignmentCommand = nil
+                return
+
+            }
             // This is a need for left turn
             var vectorAngle: CGFloat = 0.0
             if angDiff > 0 {
@@ -211,7 +239,12 @@ class GameScene: SKScene {
         }
     }
 
+    var isCoheson = true
     func cohesion(sprite: Boid) {
+        if !isCoheson {
+            sprite.cohesionCommand = nil
+            return
+        }
         let localBoids = getLocalBoids(sprite: sprite)
         let count = localBoids.count
         if count != 0 {
@@ -249,6 +282,20 @@ class GameScene: SKScene {
     }
     func changeRepulseFactor(value: Float) {
         repulseFactor = CGFloat(value)
+    }
+    func changeAngle(value: Float) {
+        maxTurn = CGFloat(value)
+    }
+    func changeSpeed(value: Float) {
+        maxVelocity = CGFloat(value)
+    }
+    func changeCoheson(value: Bool) {
+        isCoheson = value
+        if isCoheson == false {
+            for b in boids {
+                b.cohesionCommand = nil
+            }
+        }
     }
 
     override func update(_ currentTime: TimeInterval) {
